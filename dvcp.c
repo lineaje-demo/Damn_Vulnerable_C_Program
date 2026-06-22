@@ -52,67 +52,49 @@ int ProcessImage(char* filename){
 			//0x7FFFFFFF+2 = 1
 			//will cause very large/small memory allocation.
 			int size1 = img.width + img.height;
-			char* buff1=(char*)malloc(size1);
+			char* buff1=(char*)malloc(size1 >= (int)sizeof(img.data) ? (size_t)size1 : sizeof(img.data));
+			if(!buff1) continue;
 
-			//heap buffer overflow
 			memcpy(buff1,img.data,sizeof(img.data));
 			free(buff1);
-			//double free	
-			if (size1 % 2 == 0){
-				free(buff1);
-			}
-			else{
-				//use after free
-				if(size1 % 3 == 0){
-					buff1[0]='a';
-				}
-			}
 
 
 			//integer underflow 0-1=-1
 			//negative so will cause very large memory allocation
 			int size2 = img.width - img.height+100;
 			//printf("Size1:%d",size1);
-			char* buff2=(char*)malloc(size2);
+			char* buff2=(char*)malloc(size2 >= (int)sizeof(img.data) ? (size_t)size2 : sizeof(img.data));
+			if(!buff2) continue;
 
-			//heap buffer overflow
 			memcpy(buff2,img.data,sizeof(img.data));
 
 			//divide by zero
+			if(img.height == 0){
+				free(buff2);
+				continue;
+			}
 			int size3= img.width/img.height;
 			//printf("Size2:%d",size3);
 
 			char buff3[10];
-			char* buff4 =(char*)malloc(size3);
+			char* buff4 =(char*)malloc(size3 >= (int)sizeof(img.data) ? (size_t)size3 : sizeof(img.data));
+			if(!buff4){
+				free(buff2);
+				continue;
+			}
 			memcpy(buff4,img.data,sizeof(img.data));
 
 			//OOBR read bytes past stack/heap buffer
-			char OOBR = buff3[size3];
-			char OOBR_heap = buff4[size3];
+			if(size3 >= 0 && size3 < 10){
+				char OOBR = buff3[size3];
+				char OOBR_heap = buff4[size3];
 
-			//OOBW write bytes past stack/heap buffer
-			buff3[size3]='c';
-			buff4[size3]='c';
+				//OOBW write bytes past stack/heap buffer
+				buff3[size3]='c';
+				buff4[size3]='c';
+			}
 
-			if(size3>10){
-				//memory leak here
-				buff4=0;
-			}
-			else{
-				free(buff4);
-			}
-			int size4 = img.width * img.height;
-			if(size4 % 2 == 0){
-				//stack exhaustion here
-				stack_operation();
-			}
-			else{
-				//heap exhaustion here
-				char *buff5;
-				do{
-				buff5 = (char*)malloc(size4);
-				}while(buff5);
-			}
+			free(buff4);
 			free(buff2);
 		//}
 		//else
